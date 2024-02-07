@@ -18,47 +18,49 @@ export async function voteOnPoll(app: FastifyInstance) {
 
     let { sessionId } = request.cookies;
 
-    if (sessionId){
-        const userPreviousVoteOnPoll = await prisma.vote.findUnique({
-            where: {
-                sessionId_pollId: {
-                    sessionId,
-                    pollId
-                },
-            }
-        })
+    if (sessionId) {
+      const userPreviousVoteOnPoll = await prisma.vote.findUnique({
+        where: {
+          sessionId_pollId: {
+            sessionId,
+            pollId,
+          },
+        },
+      });
 
-        if(userPreviousVoteOnPoll && userPreviousVoteOnPoll.pollOptionId !== pollOptionId){
-
-            await prisma.vote.delete({
-                where:{
-                    id: userPreviousVoteOnPoll.id,
-                }
-            })
-            
-        }
-        else if(userPreviousVoteOnPoll){
-            return reply.status(400).send({message: 'You already voted on this poll.'})
-        }
+      if (
+        userPreviousVoteOnPoll &&
+        userPreviousVoteOnPoll.pollOptionId !== pollOptionId
+      ) {
+        await prisma.vote.delete({
+          where: {
+            id: userPreviousVoteOnPoll.id,
+          },
+        });
+      } else if (userPreviousVoteOnPoll) {
+        return reply
+          .status(400)
+          .send({ message: "You already voted on this poll." });
+      }
     }
     if (!sessionId) {
-      const sessionId = randomUUID();
+      sessionId = randomUUID();
 
       reply.setCookie("sessionId", sessionId, {
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: 60 * 60 * 24 * 30, // 30 days
         signed: true,
         httpOnly: true,
       });
     }
 
     await prisma.vote.create({
-        data: {
-            sessionId,
-            pollId,
-            pollOptionId
-        }
-    })
+      data: {
+        sessionId,
+        pollId,
+        pollOptionId,
+      },
+    });
 
     return reply.status(201).send();
   });
